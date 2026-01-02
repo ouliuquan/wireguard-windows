@@ -16,6 +16,14 @@ import (
 type wfpObjectInstaller func(uintptr) error
 
 //
+// Firewall rule weight constants.
+// Higher weight values have higher priority in WFP.
+//
+const (
+	weightAppFilter = 14 // Application-based filtering (IncludedApplications/ExcludedApplications)
+)
+
+//
 // Fundamental WireGuard specific WFP objects.
 //
 type baseObjects struct {
@@ -132,16 +140,16 @@ func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []neti
 
 			// Handle application-based filtering
 			if len(includedApps) > 0 {
-				// If IncludedApplications is specified, only permit those apps (higher weight)
-				err = permitApplications(includedApps, session, baseObjects, 14)
+				// If IncludedApplications is specified, only permit those apps
+				err = permitApplications(includedApps, session, baseObjects, weightAppFilter)
 				if err != nil {
 					return wrapErr(err)
 				}
 			}
 
 			if len(excludedApps) > 0 {
-				// If ExcludedApplications is specified, block those apps (higher weight)
-				err = blockApplications(excludedApps, session, baseObjects, 14)
+				// If ExcludedApplications is specified, block those apps
+				err = blockApplications(excludedApps, session, baseObjects, weightAppFilter)
 				if err != nil {
 					return wrapErr(err)
 				}

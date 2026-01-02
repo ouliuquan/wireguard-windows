@@ -54,10 +54,11 @@ ExcludedApplications = C:\Windows\System32\svchost.exe, C:\Program Files\Spotify
 
 1. **Full Path Required**: Always use the complete, absolute path to the executable file (e.g., `C:\Program Files\App\app.exe`).
 
-2. **Mutually Exclusive**: It is recommended to use either `IncludedApplications` OR `ExcludedApplications`, but not both in the same configuration. If both are specified:
-   - `IncludedApplications` permits the listed apps (higher priority)
-   - `ExcludedApplications` blocks the listed apps (higher priority)
-   - The behavior depends on the firewall rule weight ordering
+2. **Mutually Exclusive**: It is recommended to use either `IncludedApplications` OR `ExcludedApplications`, but not both in the same configuration. If both are specified, both sets of rules will be applied at the same priority level:
+   - Applications in `IncludedApplications` will have permit rules created
+   - Applications in `ExcludedApplications` will have block rules created
+   - An application appearing in both lists will effectively be blocked (block rules take precedence when both permit and block exist)
+   - This behavior may be confusing, so it's best to use only one option
 
 3. **Case Sensitivity**: Paths on Windows are case-insensitive, but it's best practice to match the actual case of the file system.
 
