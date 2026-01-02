@@ -1229,3 +1229,127 @@ func blockDNS(except []netip.Addr, session uintptr, baseObjects *baseObjects, we
 
 	return nil
 }
+
+// filterApplications creates firewall rules for specified applications.
+func filterApplications(apps []string, session uintptr, baseObjects *baseObjects, weight uint8, actionType wtFwpActionType, actionName string) error {
+	for _, appPath := range apps {
+		err := func() error {
+			appID, err := getAppIDFromPath(appPath)
+			if err != nil {
+				return wrapErr(err)
+			}
+			defer fwpmFreeMemory0(unsafe.Pointer(&appID))
+
+			condition := wtFwpmFilterCondition0{
+				fieldKey:  cFWPM_CONDITION_ALE_APP_ID,
+				matchType: cFWP_MATCH_EQUAL,
+				conditionValue: wtFwpConditionValue0{
+					_type: cFWP_BYTE_BLOB_TYPE,
+					value: uintptr(unsafe.Pointer(appID)),
+				},
+			}
+
+			filter := wtFwpmFilter0{
+				providerKey:         &baseObjects.provider,
+				subLayerKey:         baseObjects.filters,
+				weight:              filterWeight(weight),
+				numFilterConditions: 1,
+				filterCondition:     (*wtFwpmFilterCondition0)(unsafe.Pointer(&condition)),
+				action: wtFwpmAction0{
+					_type: actionType,
+				},
+			}
+
+			filterID := uint64(0)
+
+			//
+			// #1 Outbound IPv4 traffic for this app.
+			//
+			{
+				displayData, err := createWtFwpmDisplayData0(actionName+" application outbound (IPv4)", appPath)
+				if err != nil {
+					return wrapErr(err)
+				}
+
+				filter.displayData = *displayData
+				filter.layerKey = cFWPM_LAYER_ALE_AUTH_CONNECT_V4
+
+				err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+				if err != nil {
+					return wrapErr(err)
+				}
+			}
+
+			//
+			// #2 Inbound IPv4 traffic for this app.
+			//
+			{
+				displayData, err := createWtFwpmDisplayData0(actionName+" application inbound (IPv4)", appPath)
+				if err != nil {
+					return wrapErr(err)
+				}
+
+				filter.displayData = *displayData
+				filter.layerKey = cFWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4
+
+				err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+				if err != nil {
+					return wrapErr(err)
+				}
+			}
+
+			//
+			// #3 Outbound IPv6 traffic for this app.
+			//
+			{
+				displayData, err := createWtFwpmDisplayData0(actionName+" application outbound (IPv6)", appPath)
+				if err != nil {
+					return wrapErr(err)
+				}
+
+				filter.displayData = *displayData
+				filter.layerKey = cFWPM_LAYER_ALE_AUTH_CONNECT_V6
+
+				err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+				if err != nil {
+					return wrapErr(err)
+				}
+			}
+
+			//
+			// #4 Inbound IPv6 traffic for this app.
+			//
+			{
+				displayData, err := createWtFwpmDisplayData0(actionName+" application inbound (IPv6)", appPath)
+				if err != nil {
+					return wrapErr(err)
+				}
+
+				filter.displayData = *displayData
+				filter.layerKey = cFWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6
+
+				err = fwpmFilterAdd0(session, &filter, 0, &filterID)
+				if err != nil {
+					return wrapErr(err)
+				}
+			}
+
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// permitApplications permits traffic from specified applications through the tunnel.
+func permitApplications(apps []string, session uintptr, baseObjects *baseObjects, weight uint8) error {
+	return filterApplications(apps, session, baseObjects, weight, cFWP_ACTION_PERMIT, "Permit")
+}
+
+// blockApplications blocks traffic from specified applications.
+func blockApplications(apps []string, session uintptr, baseObjects *baseObjects, weight uint8) error {
+	return filterApplications(apps, session, baseObjects, weight, cFWP_ACTION_BLOCK, "Block")
+}

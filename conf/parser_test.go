@@ -127,3 +127,65 @@ func TestParseEndpoint(t *testing.T) {
 		t.Error("Error was expected")
 	}
 }
+
+func TestApplicationFiltering(t *testing.T) {
+	testInputWithApps := `
+[Interface] 
+Address = 10.192.122.1/24 
+PrivateKey = yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk= 
+ListenPort = 51820
+IncludedApplications = C:\Program Files\App1\app1.exe, C:\Program Files\App2\app2.exe
+ExcludedApplications = C:\Windows\System32\cmd.exe
+
+[Peer] 
+PublicKey = xTIBA5rboUvnH4htodjb6e697QjLERt1NAB4mZqp8Dg=    
+Endpoint = 192.95.5.67:1234 
+AllowedIPs = 0.0.0.0/0
+`
+
+	conf, err := FromWgQuick(testInputWithApps, "test")
+	if noError(t, err) {
+		lenTest(t, conf.Interface.IncludedApplications, 2)
+		contains(t, conf.Interface.IncludedApplications, `C:\Program Files\App1\app1.exe`)
+		contains(t, conf.Interface.IncludedApplications, `C:\Program Files\App2\app2.exe`)
+		
+		lenTest(t, conf.Interface.ExcludedApplications, 1)
+		contains(t, conf.Interface.ExcludedApplications, `C:\Windows\System32\cmd.exe`)
+	}
+}
+
+func TestApplicationFilteringRoundTrip(t *testing.T) {
+	testInputWithApps := `
+[Interface] 
+Address = 10.192.122.1/24 
+PrivateKey = yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk= 
+IncludedApplications = C:\Program Files\Firefox\firefox.exe
+ExcludedApplications = C:\Windows\System32\svchost.exe, C:\Windows\explorer.exe
+
+[Peer] 
+PublicKey = xTIBA5rboUvnH4htodjb6e697QjLERt1NAB4mZqp8Dg=    
+AllowedIPs = 0.0.0.0/0
+`
+
+	conf, err := FromWgQuick(testInputWithApps, "test")
+	if !noError(t, err) {
+		return
+	}
+	
+	// Convert back to WgQuick format
+	output := conf.ToWgQuick()
+	
+	// Parse it again
+	conf2, err := FromWgQuick(output, "test")
+	if !noError(t, err) {
+		return
+	}
+	
+	// Verify the application lists are preserved
+	lenTest(t, conf2.Interface.IncludedApplications, 1)
+	contains(t, conf2.Interface.IncludedApplications, `C:\Program Files\Firefox\firefox.exe`)
+	
+	lenTest(t, conf2.Interface.ExcludedApplications, 2)
+	contains(t, conf2.Interface.ExcludedApplications, `C:\Windows\System32\svchost.exe`)
+	contains(t, conf2.Interface.ExcludedApplications, `C:\Windows\explorer.exe`)
+}

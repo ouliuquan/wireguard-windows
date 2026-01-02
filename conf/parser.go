@@ -255,6 +255,18 @@ func FromWgQuick(s, name string) (*Config, error) {
 					return nil, err
 				}
 				conf.Interface.TableOff = tableOff
+			case "includedapplications":
+				apps, err := splitList(val)
+				if err != nil {
+					return nil, err
+				}
+				conf.Interface.IncludedApplications = append(conf.Interface.IncludedApplications, apps...)
+			case "excludedapplications":
+				apps, err := splitList(val)
+				if err != nil {
+					return nil, err
+				}
+				conf.Interface.ExcludedApplications = append(conf.Interface.ExcludedApplications, apps...)
 			default:
 				return nil, &ParseError{l18n.Sprintf("Invalid key for [Interface] section"), key}
 			}
