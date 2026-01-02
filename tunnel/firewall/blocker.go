@@ -101,7 +101,7 @@ func registerBaseObjects(session uintptr) (*baseObjects, error) {
 	return bo, nil
 }
 
-func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []netip.Addr) error {
+func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []netip.Addr, includedApps []string, excludedApps []string) error {
 	if wfpSession != 0 {
 		return errors.New("The firewall has already been enabled")
 	}
@@ -125,6 +125,23 @@ func EnableFirewall(luid uint64, doNotRestrict bool, restrictToDNSServers []neti
 		if !doNotRestrict {
 			if len(restrictToDNSServers) > 0 {
 				err = blockDNS(restrictToDNSServers, session, baseObjects, 15, 14)
+				if err != nil {
+					return wrapErr(err)
+				}
+			}
+
+			// Handle application-based filtering
+			if len(includedApps) > 0 {
+				// If IncludedApplications is specified, only permit those apps (higher weight)
+				err = permitApplications(includedApps, session, baseObjects, 14)
+				if err != nil {
+					return wrapErr(err)
+				}
+			}
+
+			if len(excludedApps) > 0 {
+				// If ExcludedApplications is specified, block those apps (higher weight)
+				err = blockApplications(excludedApps, session, baseObjects, 14)
 				if err != nil {
 					return wrapErr(err)
 				}

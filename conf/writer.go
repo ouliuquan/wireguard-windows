@@ -63,6 +63,14 @@ func (conf *Config) ToWgQuick() string {
 		output.WriteString("Table = off\n")
 	}
 
+	if len(conf.Interface.IncludedApplications) > 0 {
+		output.WriteString(fmt.Sprintf("IncludedApplications = %s\n", strings.Join(conf.Interface.IncludedApplications, ", ")))
+	}
+
+	if len(conf.Interface.ExcludedApplications) > 0 {
+		output.WriteString(fmt.Sprintf("ExcludedApplications = %s\n", strings.Join(conf.Interface.ExcludedApplications, ", ")))
+	}
+
 	for _, peer := range conf.Peers {
 		output.WriteString("\n[Peer]\n")
 
