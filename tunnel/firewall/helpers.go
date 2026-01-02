@@ -133,18 +133,7 @@ func getCurrentProcessAppID() (*wtFwpByteBlob, error) {
 	if err != nil {
 		return nil, wrapErr(err)
 	}
-
-	curFilePtr, err := windows.UTF16PtrFromString(currentFile)
-	if err != nil {
-		return nil, wrapErr(err)
-	}
-
-	var appID *wtFwpByteBlob
-	err = fwpmGetAppIdFromFileName0(curFilePtr, unsafe.Pointer(&appID))
-	if err != nil {
-		return nil, wrapErr(err)
-	}
-	return appID, nil
+	return getAppIDFromPath(currentFile)
 }
 
 func getAppIDFromPath(path string) (*wtFwpByteBlob, error) {
